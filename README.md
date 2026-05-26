@@ -1,0 +1,2 @@
+# CFGS_Electromedicna_Clinica_Projecte_Intermodular.
+Projecte_Intermodular

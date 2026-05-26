@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor Multiparamètric · Projecte Intermodular CFGS Electromedicina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060d14;
+    --bg2: #0a1520;
+    --bg3: #0f1e2e;
+    --cyan: #00e5ff;
+    --green: #39ff8a;
+    --amber: #ffb800;
+    --red: #ff4d6d;
+    --text: #d8eaf5;
+    --muted: #5e7d96;
+    --card: rgba(15,30,50,0.85);
+    --border: rgba(0,229,255,0.15);
+    --glow: 0 0 30px rgba(0,229,255,0.18);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+    opacity: 0.4;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2.5rem;
+    background: rgba(6,13,20,0.85);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-brand {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--cyan);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--muted); text-decoration: none; transition: color 0.2s;
+    font-family: 'Space Mono', monospace;
+  }
+  .nav-links a:hover { color: var(--cyan); }
+
+  /* ── ECG ANIMATED LINE ── */
+  .ecg-bar {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 48px;
+    overflow: hidden; opacity: 0.4;
+  }
+  .ecg-bar svg { animation: ecg-scroll 4s linear infinite; }
+  @keyframes ecg-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh; position: relative;
+    display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+    padding: 8rem 2.5rem 6rem;
+    overflow: hidden;
+  }
+  .hero-grid {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 40%, transparent 100%);
+  }
+  .hero-glow {
+    position: absolute; top: -10%; right: -5%;
+    width: 700px; height: 700px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,229,255,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-glow2 {
+    position: absolute; bottom: 0; left: -10%;
+    width: 500px; height: 500px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(57,255,138,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--cyan);
+    border-radius: 999px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--cyan); margin-bottom: 1.8rem;
+    background: rgba(0,229,255,0.06);
+  }
+  .badge-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    animation: pulse-dot 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.4;transform:scale(0.7);} }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.8rem, 6vw, 5.5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    max-width: 800px;
+    letter-spacing: -0.02em;
+  }
+  .hero h1 .accent { color: var(--cyan); display: block; }
+  .hero h1 .accent2 { color: var(--green); }
+
+  .hero-sub {
+    margin-top: 1.8rem; max-width: 580px;
+    font-size: 1.15rem; color: rgba(216,234,245,0.7);
+    font-weight: 300; line-height: 1.7;
+  }
+
+  .hero-cta {
+    display: flex; gap: 1rem; margin-top: 2.8rem; flex-wrap: wrap;
+  }
+  .btn-primary {
+    padding: 0.85rem 2.2rem;
+    background: var(--cyan); color: var(--bg); font-weight: 600;
+    font-size: 0.9rem; letter-spacing: 0.06em; text-transform: uppercase;
+    border: none; border-radius: 4px; cursor: pointer; text-decoration: none;
+    font-family: 'Space Mono', monospace;
+    transition: all 0.2s;
+    box-shadow: 0 0 20px rgba(0,229,255,0.3);
+  }
+  .btn-primary:hover { background: #33ecff; transform: translateY(-2px); box-shadow: 0 0 30px rgba(0,229,255,0.5); }
+  .btn-outline {
+    padding: 0.85rem 2.2rem;
+    background: transparent; color: var(--text);
+    font-size: 0.9rem; letter-spacing: 0.06em; text-transform: uppercase;
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer; text-decoration: none;
+    font-family: 'Space Mono', monospace;
+    transition: all 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 2rem 2.5rem;
+    display: flex; justify-content: center; gap: 0; flex-wrap: wrap;
+  }
+  .stat {
+    flex: 1; min-width: 150px; max-width: 220px;
+    padding: 1rem 2rem; text-align: center;
+    border-right: 1px solid var(--border);
+  }
+  .stat:last-child { border-right: none; }
+  .stat-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 2.2rem; font-weight: 700;
+    color: var(--cyan); display: block;
+  }
+  .stat-label {
+    font-size: 0.78rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.2rem;
+  }
+
+  /* ── SECTIONS ── */
+  section { padding: 6rem 2.5rem; position: relative; }
+  .section-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem; color: var(--cyan);
+    text-transform: uppercase; letter-spacing: 0.15em;
+    margin-bottom: 0.8rem;
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  .section-tag::before {
+    content: '//'; color: var(--muted);
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700; line-height: 1.15;
+    letter-spacing: -0.02em; margin-bottom: 1rem;
+  }
+  .section-desc {
+    max-width: 600px; color: rgba(216,234,245,0.65);
+    font-size: 1.05rem; line-height: 1.75;
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  /* ── RETO SECTION ── */
+  .reto-section { background: var(--bg2); }
+  .reto-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4rem; align-items: center; margin-top: 4rem;
+  }
+  .reto-visual {
+    position: relative; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--border); aspect-ratio: 4/3;
+  }
+  .reto-visual img { width: 100%; height: 100%; object-fit: cover; filter: saturate(0.8) contrast(1.1); }
+  .reto-visual::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(0,229,255,0.12) 0%, transparent 60%);
+  }
+  .reto-scan {
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    animation: scan 3s ease-in-out infinite;
+  }
+  @keyframes scan { 0%{top:0;opacity:0;} 10%{opacity:1;} 90%{opacity:1;} 100%{top:100%;opacity:0;} }
+
+  .reto-content h2 { font-family: 'Syne', sans-serif; font-size: 1.9rem; font-weight: 700; margin-bottom: 1.2rem; }
+  .reto-content p { color: rgba(216,234,245,0.7); line-height: 1.8; margin-bottom: 1rem; font-size: 1rem; }
+
+  .tag-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; }
+  .tag {
+    padding: 0.35rem 0.9rem; border-radius: 4px;
+    font-size: 0.78rem; font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em; border: 1px solid;
+  }
+  .tag-cyan { border-color: var(--cyan); color: var(--cyan); background: rgba(0,229,255,0.07); }
+  .tag-green { border-color: var(--green); color: var(--green); background: rgba(57,255,138,0.07); }
+  .tag-amber { border-color: var(--amber); color: var(--amber); background: rgba(255,184,0,0.07); }
+
+  /* ── PARAMETRES ── */
+  .params-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;
+    margin-top: 3.5rem;
+  }
+  .param-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 2rem 1.5rem;
+    position: relative; overflow: hidden;
+    transition: border-color 0.3s, transform 0.3s;
+    cursor: default;
+  }
+  .param-card:hover { border-color: rgba(0,229,255,0.4); transform: translateY(-4px); }
+  .param-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--param-color, var(--cyan)), transparent);
+  }
+  .param-card.ecg { --param-color: var(--cyan); }
+  .param-card.spo2 { --param-color: var(--red); }
+  .param-card.temp { --param-color: var(--amber); }
+  .param-card.nibp { --param-color: var(--green); }
+
+  .param-icon {
+    font-size: 2.5rem; margin-bottom: 1rem; display: block;
+  }
+  .param-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--param-color, var(--cyan)); margin-bottom: 0.5rem;
+  }
+  .param-desc { font-size: 0.9rem; color: rgba(216,234,245,0.65); line-height: 1.6; }
+  .param-sensor {
+    margin-top: 1rem; font-family: 'Space Mono', monospace;
+    font-size: 0.72rem; color: var(--muted);
+    padding: 0.3rem 0.6rem; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 3px; display: inline-block;
+  }
+
+  /* Mini waveform SVG in cards */
+  .mini-wave { margin-top: 1rem; opacity: 0.5; }
+
+  /* ── FASES ── */
+  .fases-section { background: var(--bg); }
+  .timeline {
+    margin-top: 4rem; position: relative;
+    padding-left: 2rem;
+  }
+  .timeline::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 1px;
+    background: linear-gradient(to bottom, var(--cyan), var(--green), var(--amber), rgba(0,229,255,0));
+  }
+  .fase {
+    position: relative; margin-bottom: 3rem; padding-left: 2.5rem;
+    animation: fadeup 0.6s ease both;
+  }
+  .fase::before {
+    content: ''; position: absolute; left: -5px; top: 8px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--cyan); border: 2px solid var(--bg);
+    box-shadow: 0 0 10px var(--cyan);
+  }
+  .fase-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--cyan); margin-bottom: 0.4rem;
+  }
+  .fase h3 { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .fase p { color: rgba(216,234,245,0.65); font-size: 0.95rem; line-height: 1.7; }
+  .fase-hours {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem; color: var(--green);
+    margin-top: 0.5rem;
+  }
+
+  /* ── COMPONENTS ── */
+  .components-section { background: var(--bg2); }
+  .components-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;
+    margin-top: 3.5rem;
+  }
+  .comp-card {
+    background: rgba(6,13,20,0.8); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.5rem;
+    display: flex; gap: 1rem; align-items: flex-start;
+    transition: border-color 0.3s;
+  }
+  .comp-card:hover { border-color: rgba(0,229,255,0.3); }
+  .comp-icon {
+    width: 40px; height: 40px; border-radius: 6px;
+    background: rgba(0,229,255,0.1); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; flex-shrink: 0;
+  }
+  .comp-name { font-family: 'Space Mono', monospace; font-size: 0.8rem; color: var(--cyan); margin-bottom: 0.3rem; }
+  .comp-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+
+  /* ── IMPACTE SOCIAL ── */
+  .social-section {
+    background: linear-gradient(135deg, var(--bg) 0%, rgba(15,30,50,0.95) 100%);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .social-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; margin-top: 3rem; }
+  .ong-list { list-style: none; margin-top: 1.5rem; }
+  .ong-list li {
+    padding: 0.8rem 1rem; margin-bottom: 0.5rem;
+    border-left: 2px solid var(--green); border-radius: 0 6px 6px 0;
+    background: rgba(57,255,138,0.05);
+    font-size: 0.95rem; color: rgba(216,234,245,0.8);
+  }
+  .impact-cards { display: flex; flex-direction: column; gap: 1rem; }
+  .impact-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.2rem 1.5rem;
+    display: flex; gap: 1rem; align-items: flex-start;
+  }
+  .impact-icon { font-size: 1.8rem; flex-shrink: 0; }
+  .impact-text { font-size: 0.9rem; color: rgba(216,234,245,0.7); line-height: 1.6; }
+  .impact-text strong { color: var(--text); display: block; margin-bottom: 0.2rem; }
+
+  /* ── EQUIP IMATGES ── */
+  .equip-section { background: var(--bg); }
+  .equip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 3.5rem; }
+  .equip-card {
+    border-radius: 10px; overflow: hidden; border: 1px solid var(--border);
+    position: relative; aspect-ratio: 4/3;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .equip-card:hover { border-color: rgba(0,229,255,0.4); transform: scale(1.02); }
+  .equip-card img { width: 100%; height: 100%; object-fit: cover; filter: saturate(0.7) contrast(1.1); }
+  .equip-card-label {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(6,13,20,0.95));
+    padding: 1.5rem 1rem 0.8rem;
+    font-family: 'Space Mono', monospace; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.1em; color: var(--cyan);
+  }
+
+  /* ── CTA FINAL ── */
+  .cta-section {
+    background: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(0,229,255,0.07) 0%, transparent 70%), var(--bg2);
+    text-align: center; padding: 7rem 2.5rem;
+    border-top: 1px solid var(--border);
+  }
+  .cta-section h2 { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 1rem; }
+  .cta-section p { color: rgba(216,234,245,0.6); font-size: 1.1rem; max-width: 520px; margin: 0 auto 2.5rem; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 2rem 2.5rem;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: gap;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem; color: var(--muted);
+  }
+  footer .footer-brand { color: var(--cyan); }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeup { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+  .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .reto-grid, .social-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .params-grid { grid-template-columns: 1fr 1fr; }
+    .components-grid { grid-template-columns: 1fr 1fr; }
+    .equip-grid { grid-template-columns: 1fr 1fr; }
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { gap: 1.2rem; }
+    section { padding: 4rem 1.5rem; }
+    .hero { padding: 7rem 1.5rem 4rem; }
+    .stats-bar { padding: 1.5rem; }
+  }
+  @media (max-width: 600px) {
+    .params-grid, .components-grid, .equip-grid { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+    .stat { min-width: 120px; padding: 0.8rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── NAVIGATION ── -->
+<nav>
+  <div class="nav-brand">⬡ MedTech · IIS Barcelona</div>
+  <ul class="nav-links">
+    <li><a href="#reto">Repte</a></li>
+    <li><a href="#parametres">Paràmetres</a></li>
+    <li><a href="#fases">Fases</a></li>
+    <li><a href="#components">Materials</a></li>
+    <li><a href="#impacte">Impacte</a></li>
+  </ul>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+
+  <div class="badge">
+    <span class="badge-dot"></span>
+    CFGS Electromedicina Clínica · Projecte Intermodular
+  </div>
+
+  <h1>
+    Monitor
+    <span class="accent">Multiparamètric</span>
+    <span class="accent2">de Baix Cost</span>
+  </h1>
+
+  <p class="hero-sub">
+    Un projecte real on l'alumnat dissenya, construeix i valida un monitor biomèdic funcional.
+    Tecnologia al servei de les persones, des del taller fins a entorns amb recursos limitats.
+  </p>
+
+  <div class="hero-cta">
+    <a href="#reto" class="btn-primary">Descobrir el repte</a>
+    <a href="#fases" class="btn-outline">Veure activitats</a>
+  </div>
+
+  <!-- Animated ECG line at bottom of hero -->
+  <div class="ecg-bar">
+    <svg width="2000" height="48" viewBox="0 0 2000 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,24 L80,24 L90,24 L100,8 L110,38 L120,4 L130,44 L140,20 L150,24 L200,24
+               L280,24 L290,24 L300,8 L310,38 L320,4 L330,44 L340,20 L350,24 L400,24
+               L480,24 L490,24 L500,8 L510,38 L520,4 L530,44 L540,20 L550,24 L600,24
+               L680,24 L690,24 L700,8 L710,38 L720,4 L730,44 L740,20 L750,24 L800,24
+               L880,24 L890,24 L900,8 L910,38 L920,4 L930,44 L940,20 L950,24 L1000,24
+               L1080,24 L1090,24 L1100,8 L1110,38 L1120,4 L1130,44 L1140,20 L1150,24 L1200,24
+               L1280,24 L1290,24 L1300,8 L1310,38 L1320,4 L1330,44 L1340,20 L1350,24 L1400,24
+               L1480,24 L1490,24 L1500,8 L1510,38 L1520,4 L1530,44 L1540,20 L1550,24 L1600,24
+               L1680,24 L1690,24 L1700,8 L1710,38 L1720,4 L1730,44 L1740,20 L1750,24 L1800,24
+               L1880,24 L1890,24 L1900,8 L1910,38 L1920,4 L1930,44 L1940,20 L1950,24 L2000,24"
+            stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+</section>
+
+<!-- ── STATS BAR ── -->
+<div class="stats-bar">
+  <div class="stat"><span class="stat-num">192h</span><span class="stat-label">Durada total</span></div>
+  <div class="stat"><span class="stat-num">4</span><span class="stat-label">Paràmetres vitals</span></div>
+  <div class="stat"><span class="stat-num">8</span><span class="stat-label">Activitats</span></div>
+  <div class="stat"><span class="stat-num">&lt;5%</span><span class="stat-label">Cost vs equip comercial</span></div>
+  <div class="stat"><span class="stat-num">ESP32</span><span class="stat-label">Microcontrolador</span></div>
+</div>
+
+<!-- ── EL REPTE ── -->
+<section id="reto" class="reto-section">
+<div class="container">
+  <p class="section-tag">El repte</p>
+  <h2 class="section-title">Tecnologia biomèdica<br>amb impacte social real</h2>
+
+  <div class="reto-grid">
+    <div class="reto-visual reveal">
+      <!-- Image: modern patient monitor in hospital -->
+      <img src="https://images.unsplash.com/photo-1530026186672-2cd00ffc50fe?w=800&q=80"
+           alt="Monitor de pacient en entorn hospitalari"
+           onerror="this.src='https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=800&q=80'">
+      <div class="reto-scan"></div>
+    </div>
+
+    <div class="reto-content reveal">
+      <h2>Un repte real, no un exercici</h2>
+      <p>L'alumnat del CFGS d'Electromedicina Clínica dissenya i construeix un <strong>monitor multiparamètric de baix cost</strong> per donar resposta a una necessitat sanitària real: portar tecnologia de monitoratge bàsic a persones amb mobilitat reduïda i a contextos amb recursos limitats.</p>
+      <p>El projecte simula un encàrrec professional d'una ONG que necessita un dispositiu funcional, econòmic i robust. Cada decisió tècnica té un impacte humà real.</p>
+      <p>L'objectiu és construir un prototip completament operatiu per menys del 5% del cost d'un equip comercial equivalent, sense renunciar a la fiabilitat de les mesures.</p>
+      <div class="tag-list">
+        <span class="tag tag-cyan">ABP — Aprenentatge Basat en Projectes</span>
+        <span class="tag tag-green">Impacte social</span>
+        <span class="tag tag-amber">Open Hardware</span>
+        <span class="tag tag-cyan">IoT mèdic</span>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ── PARÀMETRES ── -->
+<section id="parametres" style="background:var(--bg);">
+<div class="container">
+  <p class="section-tag">Paràmetres vitals</p>
+  <h2 class="section-title">Quatre mesures.<br>Un sol dispositiu.</h2>
+  <p class="section-desc">El monitor integra els quatre paràmetres vitals fonamentals de la pràctica clínica, adquirits amb sensors biomèdics de baix cost i processats per un microcontrolador ESP32.</p>
+
+  <div class="params-grid">
+
+    <div class="param-card ecg reveal">
+      <span class="param-icon">📈</span>
+      <div class="param-title">ECG</div>
+      <p class="param-desc">Electrocardiograma amb representació de l'ona PQRST i càlcul de la freqüència cardíaca en temps real. Alarmes de taquicàrdia i bradicàrdia.</p>
+      <span class="param-sensor">AD8232</span>
+      <svg class="mini-wave" width="100%" height="30" viewBox="0 0 200 30">
+        <path d="M0,15 L30,15 L35,15 L40,5 L45,25 L50,2 L55,28 L60,12 L65,15 L100,15 L130,15 L135,5 L140,25 L145,2 L150,28 L155,12 L160,15 L200,15" stroke="#00e5ff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="param-card spo2 reveal">
+      <span class="param-icon">🩸</span>
+      <div class="param-title">SpO₂</div>
+      <p class="param-desc">Saturació d'oxigen en sang per fotopletismografia. Corba PPG i percentatge de saturació amb alarma per hipoxèmia.</p>
+      <span class="param-sensor">MAX30102</span>
+      <svg class="mini-wave" width="100%" height="30" viewBox="0 0 200 30">
+        <path d="M0,20 Q25,5 50,20 Q75,35 100,20 Q125,5 150,20 Q175,35 200,20" stroke="#ff4d6d" stroke-width="1.5" fill="none"/>
+      </svg>
+    </div>
+
+    <div class="param-card temp reveal">
+      <span class="param-icon">🌡️</span>
+      <div class="param-title">Temperatura</div>
+      <p class="param-desc">Temperatura corporal digital amb protocol One-Wire. Alarmes configurabes per febre i hipotèrmia. Lectura estable i precisa.</p>
+      <span class="param-sensor">DS18B20</span>
+      <svg class="mini-wave" width="100%" height="30" viewBox="0 0 200 30">
+        <path d="M0,18 L40,18 L42,14 L44,18 L80,18 L82,12 L84,18 L130,18 L132,14 L134,18 L200,18" stroke="#ffb800" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="param-card nibp reveal">
+      <span class="param-icon">💪</span>
+      <div class="param-title">Pressió Arterial</div>
+      <p class="param-desc">Pressió sistòlica i diastòlica per mètode oscil·lomètric amb manegot. El paràmetre més complex del projecte, amb validació clínica.</p>
+      <span class="param-sensor">MPS20N0040D</span>
+      <svg class="mini-wave" width="100%" height="30" viewBox="0 0 200 30">
+        <path d="M0,20 L20,20 Q30,10 40,20 Q50,30 60,20 Q70,8 80,20 Q90,28 100,20 L200,20" stroke="#39ff8a" stroke-width="1.5" fill="none"/>
+      </svg>
+    </div>
+
+  </div>
+</div>
+</section>
+
+<!-- ── FASES DEL PROJECTE ── -->
+<section id="fases" class="fases-section">
+<div class="container">
+  <p class="section-tag">Planificació</p>
+  <h2 class="section-title">De zero a prototip<br>funcional en 32 setmanes</h2>
+  <p class="section-desc">El projecte es desplega en quatre fases progressives. Cada lliurament és una evidència d'aprenentatge avaluable i un pas real cap al producte final.</p>
+
+  <div class="timeline">
+
+    <div class="fase reveal">
+      <div class="fase-tag">Fase 1 · Setembre</div>
+      <h3>Contextualització del projecte</h3>
+      <p>Presentació del repte, creació dels grups HADA, recerca d'informació sobre tecnologia biomèdica, ONG col·laboradores, normativa i primers documents de viabilitat.</p>
+      <div class="fase-hours">⏱ 12 hores</div>
+    </div>
+
+    <div class="fase reveal">
+      <div class="fase-tag">Fase 2 · Octubre – Gener</div>
+      <h3>Sensors biomèdics: teoria i pràctica</h3>
+      <p>Quatre activitats en paral·lel: ECG amb AD8232, SpO₂ amb MAX30102, temperatura amb DS18B20 i pressió arterial amb sensor piezoresistiu. Cadascuna amb muntatge, programació i informe tècnic.</p>
+      <div class="fase-hours">⏱ 90 hores</div>
+    </div>
+
+    <div class="fase reveal">
+      <div class="fase-tag">Fase 3 · Febrer – Març</div>
+      <h3>Disseny del sistema integrat</h3>
+      <p>Disseny de la PCB amb EasyEDA, sistema d'alimentació amb bateria LiPo i convertidor boost, pantalla TFT ILI9341, unificació del codi Arduino i pressupost complet del prototip.</p>
+      <div class="fase-hours">⏱ 36 hores</div>
+    </div>
+
+    <div class="fase reveal">
+      <div class="fase-tag">Fase 4 · Abril – Maig</div>
+      <h3>Construcció, validació i defensa</h3>
+      <p>Muntatge final, carcassa 3D impresa, verificació amb equips Fluke (ESA620, ProSim4, SPOTLight), memòria tècnica, manual d'usuari i defensa pública del projecte.</p>
+      <div class="fase-hours">⏱ 54 hores · Defensa final inclosa</div>
+    </div>
+
+  </div>
+</div>
+</section>
+
+<!-- ── COMPONENTS ── -->
+<section id="components" class="components-section">
+<div class="container">
+  <p class="section-tag">Materials i components</p>
+  <h2 class="section-title">Tecnologia real,<br>cost assequible</h2>
+  <p class="section-desc">Tots els components es poden adquirir fàcilment a Espanya. La selecció prioritza la disponibilitat, la documentació tècnica abundant i la facilitat d'integració.</p>
+
+  <div class="components-grid">
+
+    <div class="comp-card reveal">
+      <div class="comp-icon">⚡</div>
+      <div>
+        <div class="comp-name">ESP32-WROOM (38 pins)</div>
+        <p class="comp-desc">Microcontrolador central. Dual-core 240 MHz, Wi-Fi, Bluetooth, ADC de 12 bits. El cervell de tot el sistema.</p>
+      </div>
+    </div>
+
+    <div class="comp-card reveal">
+      <div class="comp-icon">❤️</div>
+      <div>
+        <div class="comp-name">AD8232</div>
+        <p class="comp-desc">Amplificador d'instrumentació per ECG. Filtratge integrat, baix consum, connexió directa a elèctrodes.</p>
+      </div>
+    </div>
+
+    <div class="comp-card reveal">
+      <div class="comp-icon">💡</div>
+      <div>
+        <div class="comp-name">MAX30102</div>
+        <p class="comp-desc">Sensor de pulsioximetria per fotopletismografia. LEDs vermell i infraroig integrats, protocol I2C.</p>
+      </div>
+    </div>
+
+    <div class="comp-card reveal">
+      <div class="comp-icon">🌡️</div>
+      <div>
+        <div class="comp-name">DS18B20</div>
+        <p class="comp-desc">Sensor de temperatura digital One-Wire. Precisió ±0.5°C, resolució fins a 12 bits. Simple i robust.</p>
+      </div>
+    </div>
+
+    <div class="comp-card reveal">
+      <div class="comp-icon">🖥️</div>
+      <div>
+        <div class="comp-name">ILI9341 TFT (320×240)</div>
+        <p class="comp-desc">Pantalla LCD color per SPI. Visualització en temps real de totes les formes d'ona i valors numèrics.</p>
+      </div>
+    </div>
+
+    <div class="comp-card reveal">
+      <div class="comp-icon">🔋</div>
+      <div>
+        <div class="comp-name">TP4056 + MT3608 + LiPo</div>
+        <p class="comp-desc">Sistema d'alimentació portàtil amb bateria de liti, carregador i convertidor boost. Autonomia mínima 2h.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+</section>
+
+<!-- ── IMPACTE SOCIAL ── -->
+<section id="impacte" class="social-section">
+<div class="container">
+  <p class="section-tag">Dimensió social</p>
+  <h2 class="section-title">Aprendre fent<br>un món millor</h2>
+
+  <div class="social-grid">
+
+    <div class="reveal">
+      <p class="section-desc" style="margin-bottom:1.5rem;">El projecte neix d'una necessitat real: milions de persones en contextos vulnerables no tenen accés a tecnologia de monitoratge bàsic. L'alumnat treballa per canviar-ho.</p>
+      <p style="color:rgba(216,234,245,0.6);font-size:0.95rem;line-height:1.8;margin-bottom:1.5rem;">S'estableix contacte amb entitats col·laboradores des de l'inici, per conèixer les necessitats reals dels usuaris finals i donar autenticitat al repte.</p>
+
+      <h3 style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:1rem;color:var(--green);">Possibles entitats col·laboradores</h3>
+      <ul class="ong-list">
+        <li>🌍 Ulls del Món</li>
+        <li>🩺 Metges del Món</li>
+        <li>🚑 Metges Sense Fronteres</li>
+        <li>⚙️ Enginyers Sense Fronteres</li>
+      </ul>
+    </div>
+
+    <div class="impact-cards reveal">
+      <div class="impact-card">
+        <div class="impact-icon">🏠</div>
+        <div class="impact-text">
+          <strong>Atenció domiciliària</strong>
+          Facilita el control de persones amb mobilitat reduïda sense desplaçaments innecessaris al centre mèdic.
+        </div>
+      </div>
+      <div class="impact-card">
+        <div class="impact-icon">🌐</div>
+        <div class="impact-text">
+          <strong>Replicable globalment</strong>
+          Disseny obert i components disponibles a tot arreu. Fabricació local possible en països en vies de desenvolupament.
+        </div>
+      </div>
+      <div class="impact-card">
+        <div class="impact-icon">🎓</div>
+        <div class="impact-text">
+          <strong>Professionalització real</strong>
+          L'alumnat desenvolupa competències d'enginyeria, gestió de projectes i responsabilitat social aplicades a un repte autèntic.
+        </div>
+      </div>
+      <div class="impact-card">
+        <div class="impact-icon">🏆</div>
+        <div class="impact-text">
+          <strong>Projecció externa</strong>
+          El projecte pot presentar-se al Congrés SEEIC (Societat Espanyola d'Electromedicina i Enginyeria Clínica).
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</section>
+
+<!-- ── EQUIPAMENT DE VERIFICACIÓ ── -->
+<section class="equip-section">
+<div class="container">
+  <p class="section-tag">Verificació i qualitat</p>
+  <h2 class="section-title">Mesures contrastades<br>amb equips professionals</h2>
+  <p class="section-desc">El prototip es valida amb instrumentació professional del departament d'electromedicina. Les mesures no es donen per bones fins que no ho diuen els equips patró.</p>
+
+  <div class="equip-grid">
+    <div class="equip-card reveal">
+      <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&q=80" alt="Equipament de laboratori electromèdic" onerror="this.style.background='#0f1e2e'">
+      <div class="equip-card-label">Fluke ESA620 · ECG + Seguretat elèctrica</div>
+    </div>
+    <div class="equip-card reveal">
+      <img src="https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=600&q=80" alt="Monitoratge vital hospitalari" onerror="this.style.background='#0f1e2e'">
+      <div class="equip-card-label">Fluke ProSim 4 · Pressió arterial NIBP</div>
+    </div>
+    <div class="equip-card reveal">
+      <img src="https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80" alt="Verificació de sensors biomèdics" onerror="this.style.background='#0f1e2e'">
+      <div class="equip-card-label">Fluke SPOT Light · Verificació SpO₂</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ── CTA FINAL ── -->
+<section class="cta-section">
+  <p class="section-tag" style="justify-content:center;">Institut d'Indústria Sostenible de Barcelona</p>
+  <h2>Construeix el futur<br>de la salut portàtil</h2>
+  <p>Forma part d'un projecte que combina electrònica, programació, disseny i responsabilitat social. Un repte real. Un prototip funcional. Un impacte que va més enllà de l'aula.</p>
+  <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+    <a href="#reto" class="btn-primary">Tornar al repte</a>
+    <a href="#fases" class="btn-outline">Veure activitats</a>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <span class="footer-brand">⬡ Monitor Multiparamètric · CFGS Electromedicina Clínica</span>
+  <span>Institut d'Indústria Sostenible de Barcelona · 2025–2026</span>
+  <span style="color:var(--green);">Projecte Intermodular M1595</span>
+</footer>
+
+<script>
+  // Intersection Observer for reveal animations
+  const reveals = document.querySelectorAll('.reveal');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 80);
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
